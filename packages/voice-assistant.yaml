@@ -395,6 +395,31 @@ voice_assistant:
     # Reset the voice assistant phase id and reset the LED animations.
     - lambda: id(voice_assistant_phase) = ${voice_assist_idle_phase_id};
     - script.execute: control_leds
+    # Restart wake word detection after every interaction (#63).
+    # After a TTS response made of several sentences, mWW can keep reporting
+    # is_running while it no longer receives audio, so the device stays deaf
+    # until a reboot. The interval watchdog below only covers a *stopped* mWW.
+    # The stop model is toggled by activate_stop_word_once around the
+    # announcement; with sentence-wise TTS playback the announcing state flaps
+    # between sentences, so make sure it is off as well.
+    - delay: 1s
+    - if:
+        condition:
+          and:
+            - not:
+                voice_assistant.is_running:
+            - not:
+                media_player.is_announcing:
+                  id: external_media_player
+            - switch.is_off: timer_ringing
+        then:
+          - logger.log:
+              level: DEBUG
+              format: "Restarting wake word detection after interaction"
+          - micro_wake_word.disable_model: stop
+          - micro_wake_word.stop:
+          - delay: 300ms
+          - micro_wake_word.start:
   on_timer_finished:
     - switch.turn_on: timer_ringing
     - lambda: |
