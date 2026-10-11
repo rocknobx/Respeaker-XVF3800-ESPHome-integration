@@ -223,12 +223,32 @@ micro_wake_word:
                             media_player.is_announcing:
                               id: external_media_player
                           then:
+                            # Barge-in: stop the announcement AND start listening.
+                            # Previously the wake word only stopped the announcement,
+                            # so a second wake word was needed. With an external
+                            # speaker the tail of a response is often still playing
+                            # when the user already speaks the next wake word.
                             - logger.log:
                                 level: INFO
-                                format: "Wake word ignored: stopping the announcement"
+                                format: "Wake word during announcement: stopping it and starting the voice assistant"
                             - media_player.stop:
                                 announcement: true
                                 id: external_media_player
+                            - wait_until:
+                                condition:
+                                  not:
+                                    media_player.is_announcing:
+                                      id: external_media_player
+                                timeout: 1s
+                            - micro_wake_word.disable_model: stop
+                            - delay: 100ms
+                            - voice_assistant.start:
+                                wake_word: !lambda return wake_word;
+                            - if:
+                                condition:
+                                  switch.is_on: beam_lock_enabled
+                                then:
+                                  - lambda: id(respeaker).lock_beam();
                           # Start the voice assistant and play the wake sound, if enabled
                           else:
                             - if:
