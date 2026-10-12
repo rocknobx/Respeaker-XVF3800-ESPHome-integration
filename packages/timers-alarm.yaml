@@ -36,11 +36,10 @@ globals:
 time:
   - platform: homeassistant
     id: homeassistant_time
-    on_time:
-      # Every 1 minute
-      - seconds: 0
-        then:
-          - script.execute: check_alarm
+    # TEST (rocknobx): minute tick removed. Suspected to make wake word
+    # detection miss commands around second :00 (together with the 120 s
+    # DFU version poll). Disables the device alarm clock and the
+    # "Current device time" sensor updates; voice timers are unaffected.
     on_time_sync:
       - script.execute: publish_current_time
 
